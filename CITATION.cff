@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Zhang"
+    given-names: "Zhuohang"
+    orcid: "https://orcid.org/0009-0002-0595-464X"
+title: "Balikpapan Bay MSP System Tool"

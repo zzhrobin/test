@@ -1,0 +1,142 @@
+{
+    "experiment_timestamp": "2026-04-05 16:46:11",
+    "project": "Balikpapan Bay MSP SDSS",
+    "grid_settings": {
+        "EPSG": "32750",
+        "cell_size_m": "250",
+        "total_cells": 23420
+    },
+    "sci_kde_settings": {
+        "sigma_short": 3.0,
+        "sigma_long": 10.0,
+        "robust_normalization": true
+    },
+    "conflict_matrix_snapshot": {
+        "Z1_MPZ": {
+            "Z1_MPZ": 0.0,
+            "Z2_UIZ": 1.0,
+            "Z3_PSZ": 1.0,
+            "Z4_TZ": 0.3,
+            "Z5_TZE": 0.1,
+            "Z6_FZT": 0.2,
+            "Z7_FZC": 0.8,
+            "Z8_FZA": 0.8,
+            "Z9_SPZ": 0.9,
+            "Z10_RZ": 0.1
+        },
+        "Z2_UIZ": {
+            "Z1_MPZ": 1.0,
+            "Z2_UIZ": 0.0,
+            "Z3_PSZ": 0.1,
+            "Z4_TZ": 0.8,
+            "Z5_TZE": 0.9,
+            "Z6_FZT": 0.9,
+            "Z7_FZC": 0.6,
+            "Z8_FZA": 0.9,
+            "Z9_SPZ": 0.2,
+            "Z10_RZ": 0.4
+        },
+        "Z3_PSZ": {
+            "Z1_MPZ": 1.0,
+            "Z2_UIZ": 0.1,
+            "Z3_PSZ": 0.0,
+            "Z4_TZ": 0.7,
+            "Z5_TZE": 1.0,
+            "Z6_FZT": 1.0,
+            "Z7_FZC": 0.7,
+            "Z8_FZA": 1.0,
+            "Z9_SPZ": 0.3,
+            "Z10_RZ": 0.5
+        },
+        "Z4_TZ": {
+            "Z1_MPZ": 0.3,
+            "Z2_UIZ": 0.8,
+            "Z3_PSZ": 0.7,
+            "Z4_TZ": 0.0,
+            "Z5_TZE": 0.2,
+            "Z6_FZT": 0.3,
+            "Z7_FZC": 0.6,
+            "Z8_FZA": 0.5,
+            "Z9_SPZ": 0.8,
+            "Z10_RZ": 0.3
+        },
+        "Z5_TZE": {
+            "Z1_MPZ": 0.1,
+            "Z2_UIZ": 0.9,
+            "Z3_PSZ": 1.0,
+            "Z4_TZ": 0.2,
+            "Z5_TZE": 0.0,
+            "Z6_FZT": 0.2,
+            "Z7_FZC": 0.8,
+            "Z8_FZA": 0.4,
+            "Z9_SPZ": 0.8,
+            "Z10_RZ": 0.2
+        },
+        "Z6_FZT": {
+            "Z1_MPZ": 0.2,
+            "Z2_UIZ": 0.9,
+            "Z3_PSZ": 1.0,
+            "Z4_TZ": 0.3,
+            "Z5_TZE": 0.2,
+            "Z6_FZT": 0.0,
+            "Z7_FZC": 0.6,
+            "Z8_FZA": 0.3,
+            "Z9_SPZ": 0.7,
+            "Z10_RZ": 0.2
+        },
+        "Z7_FZC": {
+            "Z1_MPZ": 0.8,
+            "Z2_UIZ": 0.6,
+            "Z3_PSZ": 0.7,
+            "Z4_TZ": 0.6,
+            "Z5_TZE": 0.8,
+            "Z6_FZT": 0.6,
+            "Z7_FZC": 0.0,
+            "Z8_FZA": 0.7,
+            "Z9_SPZ": 0.7,
+            "Z10_RZ": 0.3
+        },
+        "Z8_FZA": {
+            "Z1_MPZ": 0.8,
+            "Z2_UIZ": 0.9,
+            "Z3_PSZ": 1.0,
+            "Z4_TZ": 0.5,
+            "Z5_TZE": 0.4,
+            "Z6_FZT": 0.3,
+            "Z7_FZC": 0.7,
+            "Z8_FZA": 0.0,
+            "Z9_SPZ": 0.9,
+            "Z10_RZ": 0.3
+        },
+        "Z9_SPZ": {
+            "Z1_MPZ": 0.9,
+            "Z2_UIZ": 0.2,
+            "Z3_PSZ": 0.3,
+            "Z4_TZ": 0.8,
+            "Z5_TZE": 0.8,
+            "Z6_FZT": 0.7,
+            "Z7_FZC": 0.7,
+            "Z8_FZA": 0.9,
+            "Z9_SPZ": 0.0,
+            "Z10_RZ": 0.1
+        },
+        "Z10_RZ": {
+            "Z1_MPZ": 0.1,
+            "Z2_UIZ": 0.4,
+            "Z3_PSZ": 0.5,
+            "Z4_TZ": 0.3,
+            "Z5_TZE": 0.2,
+            "Z6_FZT": 0.2,
+            "Z7_FZC": 0.3,
+            "Z8_FZA": 0.3,
+            "Z9_SPZ": 0.1,
+            "Z10_RZ": 0.0
+        }
+    },
+    "scenario_allocation": {
+        "target_ratios": "38% (Low) : 34% (Mid) : 28% (High)",
+        "eco_anchor_ikn": "Enabled (Distance decay applied)",
+        "land_sea_synergy": "Enabled (50% reduction for near-coast villages)"
+    },
+    "execution_scenario": "利益相关者偏好 (Mode: adaptive)"
+}

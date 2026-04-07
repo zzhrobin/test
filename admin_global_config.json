@@ -1,0 +1,14 @@
+{
+    "time_decay_max": 100.0,
+    "time_decay_min": 20.0,
+    "fishery_range_km": 15.0,
+    "holness_base_cost": 0.3,
+    "influence_strong_m": 1500.0,
+    "influence_weak_m": 500.0,
+    "sci_sigma_short": 3.0,
+    "sci_sigma_long": 10.0,
+    "base_blm": 1.0,
+    "gurobi_time": 300,
+    "gurobi_gap": 0.05,
+    "is_mandatory": false
+}
