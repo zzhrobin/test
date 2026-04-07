@@ -1,6 +1,7 @@
 import numpy as np
 import geopandas as gpd
 from core.gurobi_engine import run_gurobi_optimization
+from scipy.ndimage import gaussian_filter  # <--- 必须补上这句！
 
 ZONES_10 = [
     "Z1_MPZ",
