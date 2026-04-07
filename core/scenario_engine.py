@@ -1,7 +1,15 @@
 import numpy as np
 import geopandas as gpd
+from scipy.ndimage import gaussian_filter
 from core.gurobi_engine import run_gurobi_optimization
-from scipy.ndimage import gaussian_filter  # <--- 必须补上这句！
+
+# 确保安装了 libpysal： pip install libpysal
+try:
+    import libpysal
+
+    HAS_PY_SAL = True
+except ImportError:
+    HAS_PY_SAL = False
 
 ZONES_10 = [
     "Z1_MPZ",
@@ -15,6 +23,36 @@ ZONES_10 = [
     "Z9_SPZ",
     "Z10_RZ",
 ]
+
+
+def redistribute_fishery_costs(grid_gdf, locked_indices, unlocked_indices):
+    """渔业成本被挤压后的外溢均摊逻辑"""
+    for z in ["Z6_FZT", "Z7_FZC", "Z8_FZA"]:
+        col_name = f"Cost_L_{z}"
+        if col_name not in grid_gdf.columns:
+            continue
+
+        # 提取被锁定/挤压区域的渔业总成本
+        displaced_cost = grid_gdf.loc[locked_indices, col_name].sum()
+        if displaced_cost > 0:
+            # 找到可以接受均摊的自由网格 (原本就有该渔业潜力的)
+            valid_mask = (grid_gdf.index.isin(unlocked_indices)) & (
+                grid_gdf[col_name] > 0
+            )
+            valid_idx = grid_gdf[valid_mask].index
+
+            if len(valid_idx) > 0:
+                base_sum = grid_gdf.loc[valid_idx, col_name].sum()
+                if base_sum > 0:
+                    # 按原本的适宜性权重分配
+                    weights = grid_gdf.loc[valid_idx, col_name] / base_sum
+                    grid_gdf.loc[valid_idx, col_name] += displaced_cost * weights
+                else:
+                    grid_gdf.loc[valid_idx, col_name] += displaced_cost / len(valid_idx)
+
+            # 将被锁定区的该项渔业成本清零
+            grid_gdf.loc[locked_indices, col_name] = 0.0
+    return grid_gdf
 
 
 def resolve_scenario_allocation(
@@ -32,17 +70,38 @@ def resolve_scenario_allocation(
     num_zones = len(ZONES_10)
 
     # ==========================================
-    # 1. 跨列全局归一化 (防爆破：剔除锁定格子)
+    # 1. 提取精准的空间锁定约束
     # ==========================================
+    col_to_role = {c: role for role, cols in confirmed_mapping.items() for c in cols}
+    locked_data = []
     locked_indices_set = set()
+
     for feat in locked_features:
         if feat in grid_gdf.columns:
-            locked_indices_set.update(np.where(grid_gdf[feat].fillna(0).values > 0)[0])
+            # 直接使用预检时的映射字典进行匹配
+            role = col_to_role.get(feat)
+            if role and role in ZONES_10:
+                target_j = ZONES_10.index(role)
+                feat_cells = np.where(grid_gdf[feat].fillna(0).values > 0)[0]
+                for cell_idx in feat_cells:
+                    locked_data.append((cell_idx, target_j))
+                    locked_indices_set.add(cell_idx)
 
     unlocked_indices = list(set(range(total_cells)) - locked_indices_set)
+    logs.append(f"🔒 成功硬锁定 {len(locked_data)} 个既定事实网格。")
+
+    # ==========================================
+    # 2. 渔业成本平摊与全域极值归一化
+    # ==========================================
+    # 执行渔业挤压成本均摊
+    if locked_indices_set:
+        grid_gdf = redistribute_fishery_costs(
+            grid_gdf, list(locked_indices_set), unlocked_indices
+        )
+        logs.append("🌊 渔业成本挤压与外溢平摊完成。")
+
     raw_cols = [f"Cost_L_{z}" for z in ZONES_10]
 
-    # 仅使用未锁定的自由网格来寻找全域极大极小值
     if unlocked_indices:
         all_unlocked_data = grid_gdf.loc[unlocked_indices, raw_cols].values
         global_min, global_max = np.min(all_unlocked_data), np.max(all_unlocked_data)
@@ -50,12 +109,10 @@ def resolve_scenario_allocation(
         all_raw_data = grid_gdf[raw_cols].values
         global_min, global_max = np.min(all_raw_data), np.max(all_raw_data)
 
-    logs.append(
-        f"🔍 剔除锁定极值后，提取全域本底落差: Min={global_min:.2f}, Max={global_max:.2f}"
-    )
-
     cost_matrix = np.zeros((total_cells, num_zones))
-    norm_costs = {}
+
+    # 在这个情景下，生成专属的归一化属性列
+    scen_prefix = "S_" + scenario_name.split(" ")[0]  # e.g., S_开发优先
     for idx, z in enumerate(ZONES_10):
         col_name = f"Cost_L_{z}"
         if global_max > global_min:
@@ -64,25 +121,23 @@ def resolve_scenario_allocation(
             ) * 100.0 + 1.0
         else:
             norm_array = np.ones(total_cells)
-        norm_costs[z] = norm_array
-        grid_gdf[f"Norm_Cost_{z}"] = norm_array
 
-    # 边界集聚平滑 (模拟 BLM)
-    max_r = grid_gdf["row_idx"].max()
-    max_c = grid_gdf["col_idx"].max()
-    for idx, z in enumerate(ZONES_10):
-        grid_2d = np.full((max_r + 1, max_c + 1), 101.0)
-        grid_2d[grid_gdf["row_idx"], grid_gdf["col_idx"]] = norm_costs[z]
+        # 保存专属属性，供用户在属性表中单独查看该情景的博弈成本
+        grid_gdf[f"{scen_prefix}_Cost_{z}"] = norm_array
+
+        grid_2d = np.full(
+            (grid_gdf["row_idx"].max() + 1, grid_gdf["col_idx"].max() + 1), 101.0
+        )
+        grid_2d[grid_gdf["row_idx"], grid_gdf["col_idx"]] = norm_array
         sigma_val = 2.0 if "保护" in scenario_name or "现状" in scenario_name else 1.2
         smoothed_2d = gaussian_filter(grid_2d, sigma=sigma_val)
-        blended = (
-            0.5 * norm_costs[z]
+        cost_matrix[:, idx] = (
+            0.5 * norm_array
             + 0.5 * smoothed_2d[grid_gdf["row_idx"], grid_gdf["col_idx"]]
         )
-        cost_matrix[:, idx] = blended
 
     # ==========================================
-    # 2. 基于“本底面积足迹”的相对配额提取
+    # 3. 提取空间配额 (RZ和SPZ绝对不参与比例)
     # ==========================================
     zone_features = {z: [] for z in ZONES_10}
     for role, cols in confirmed_mapping.items():
@@ -99,55 +154,59 @@ def resolve_scenario_allocation(
 
     zone_quotas = []
     for z in ZONES_10:
-        if z == "Z10_RZ":
-            zone_quotas.append(0)  # 核心逻辑：保留区没有主动配额，全靠留白！
+        if z in ["Z10_RZ", "Z9_SPZ"]:
+            zone_quotas.append(0)
             continue
 
         pct = zone_targets.get(z, 0)
         feats = [f for f in zone_features[z] if f in grid_gdf.columns]
         if feats:
-            # 算出该类型要素原本总共占据了多少个网格 (Footprint)
             footprint_mask = grid_gdf[feats].max(axis=1).values > 0
-            footprint_area = np.sum(footprint_mask)
-            # 从原本的 100% 占地中，按比例提取目标网格数
-            quota = int(footprint_area * (pct / 100.0))
+            quota = int(np.sum(footprint_mask) * (pct / 100.0))
         else:
             quota = 0
-
         zone_quotas.append(quota)
-        if quota > 0:
-            logs.append(
-                f"🎯 [{z.split('_')[1]}] 现有足迹 {footprint_area} 个网格，提取目标配额: {quota} 个"
-            )
 
-    # 3. 提取空间相邻边 (Edges) 与动态 SCI 权重
+    # ==========================================
+    # 4. 构建空间相邻拓扑 (激活 BLM 的关键)
+    # ==========================================
     edges, weights = [], []
+    blm_base = global_params.get("base_blm", 1.0)
+    if HAS_PY_SAL and blm_base > 0:
+        logs.append("🌐 正在提取空间邻接矩阵 (Queen Contiguity)...")
+        w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf)
+        sci_col = "Conflict_Index" if "Conflict_Index" in grid_gdf.columns else None
+
+        for i, neighbors in w.neighbors.items():
+            for k in neighbors:
+                if i < k:
+                    edges.append((i, k))
+                    if sci_col:
+                        sci_w = (
+                            (grid_gdf.at[i, sci_col] + grid_gdf.at[k, sci_col])
+                            / 2.0
+                            / 100.0
+                        )
+                        weights.append(blm_base * sci_w)
+                    else:
+                        weights.append(blm_base)
+        logs.append(f"🔗 连片拓扑提取完成，共 {len(edges)} 条相交边界参与惩罚计算。")
+    else:
+        logs.append("⚠️ libpysal 未安装或 BLM 设为 0，将不执行连片惩罚！")
 
     # ==========================================
-    # 补充丢失的 Gurobi 调起逻辑
+    # 5. 正式调起 Gurobi
     # ==========================================
-    is_mandatory = global_params.get("is_mandatory", True)
-    time_limit = global_params.get("gurobi_time", 300)
-    mip_gap = global_params.get("gurobi_gap", 0.05)
-
-    # 转换冲突矩阵为二维数组
     conflict_matrix_2d = np.zeros((num_zones, num_zones))
     for i, z1 in enumerate(ZONES_10):
         for j, z2 in enumerate(ZONES_10):
             conflict_matrix_2d[i, j] = custom_matrix.get(z1, {}).get(z2, 0.0)
 
-    # 生成锁定网格数据
-    locked_data = []
-    for feat in locked_features:
-        if feat in grid_gdf.columns:
-            target_zone = next((z for z in ZONES_10 if z.split("_")[1] in feat), None)
-            if target_zone:
-                target_j = ZONES_10.index(target_zone)
-                feat_cells = np.where(grid_gdf[feat].fillna(0).values > 0)[0]
-                for cell_idx in feat_cells:
-                    locked_data.append((cell_idx, target_j))
+    is_mandatory = global_params.get("is_mandatory", True)
+    time_limit = global_params.get("gurobi_time", 300)
+    mip_gap = global_params.get("gurobi_gap", 0.05)
 
-    logs.append(f"⚙️ 启动 Gurobi (TimeLimit={time_limit}s, Gap={mip_gap}) ...")
+    logs.append(f"⚙️ 启动 MIP Gurobi (TimeLimit={time_limit}s, Gap={mip_gap}) ...")
     g_solution, g_msg = run_gurobi_optimization(
         total_cells,
         num_zones,
@@ -162,15 +221,12 @@ def resolve_scenario_allocation(
         is_mandatory,
     )
     logs.append(g_msg)
-    # ==========================================
 
     if g_solution is not None:
         final_zones = []
         for i in g_solution:
             if i == -1:
-                final_zones.append(
-                    "Z10_RZ"
-                )  # 核心：Gurobi没分配的留白网格，自动归入保留区！
+                final_zones.append("Z10_RZ")
             else:
                 final_zones.append(ZONES_10[i])
         grid_gdf["Scenario_Zoning"] = final_zones

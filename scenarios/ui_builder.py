@@ -61,7 +61,7 @@ class ScenarioUIBuilder:
         gb_lock.setLayout(hl1)
         l.addWidget(gb_lock)
 
-        # 2. 分类海域目标配额
+        # 2. 分类海域目标配额 (对标 2025 论文参数)
         gb_target = QGroupBox("🎯 全局分区约束占比 (%)")
         gl = QGridLayout()
         categories = {
@@ -81,18 +81,53 @@ class ScenarioUIBuilder:
                 spin = QSpinBox()
                 spin.setRange(0, 100)
 
-                # 根据不同情景配置默认保留百分比
-                if "保持现状" in scenario_name:
-                    spin.setValue(15 if "UIZ" in z else 10)
-                elif "均衡发展" in scenario_name:
-                    spin.setValue(30 if "MPZ" in z else 8)
-                elif "保护优先" in scenario_name:
-                    spin.setValue(45 if "MPZ" in z else 5)
+                # 参考 2025 MSP 论文各情景基准参数
+                if "保护优先" in scenario_name:
+                    defaults = {
+                        "MPZ": 45,
+                        "TZE": 30,
+                        "FZT": 30,
+                        "FZC": 15,
+                        "FZA": 20,
+                        "UIZ": 10,
+                        "PSZ": 15,
+                        "TZ": 20,
+                    }
                 elif "开发优先" in scenario_name:
-                    spin.setValue(25 if "UIZ" in z else 8)
-                else:
-                    spin.setValue(10)
+                    defaults = {
+                        "MPZ": 15,
+                        "TZE": 15,
+                        "FZT": 15,
+                        "FZC": 35,
+                        "FZA": 40,
+                        "UIZ": 45,
+                        "PSZ": 30,
+                        "TZ": 35,
+                    }
+                elif "利益相关者" in scenario_name:
+                    defaults = {
+                        "MPZ": 25,
+                        "TZE": 20,
+                        "FZT": 45,
+                        "FZC": 40,
+                        "FZA": 35,
+                        "UIZ": 25,
+                        "PSZ": 20,
+                        "TZ": 45,
+                    }
+                else:  # 均衡发展 / 保持现状
+                    defaults = {
+                        "MPZ": 25,
+                        "TZE": 20,
+                        "FZT": 25,
+                        "FZC": 25,
+                        "FZA": 25,
+                        "UIZ": 20,
+                        "PSZ": 20,
+                        "TZ": 20,
+                    }
 
+                spin.setValue(defaults.get(z_abbr, 10))
                 gl.addWidget(spin, row, col + 1)
                 controls["target_spins"][z] = spin
                 col += 2
