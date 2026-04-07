@@ -1,0 +1,19 @@
+{
+    "locked": [
+        "port",
+        "oil",
+        "bridge",
+        "shipline"
+    ],
+    "sci_enabled": false,
+    "targets": {
+        "Z1_MPZ": 15,
+        "Z5_TZE": 15,
+        "Z6_FZT": 15,
+        "Z7_FZC": 35,
+        "Z8_FZA": 40,
+        "Z2_UIZ": 45,
+        "Z3_PSZ": 30,
+        "Z4_TZ": 35
+    }
+}

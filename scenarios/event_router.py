@@ -167,23 +167,54 @@ class ScenarioEventRouter:
         return target_percentages
 
     def run_scenario_zoning(self, scenario_name):
-        controls = self.win.ui.scenario_controls[scenario_name]
-        # 把 SCI 开关状态塞进全局参数里传过去
-        self.win.global_params["enable_sci"] = controls["cb_sci"].isChecked()
+        win = self.win
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            controls = win.ui.scenario_controls[scenario_name]
+            locked_features = controls.get("locked_features", [])
+            zone_targets = {
+                z: spin.value() for z, spin in controls["target_spins"].items()
+            }
 
-        self.win.final_grid, report = resolve_scenario_allocation(
-            self.win.final_grid,
-            scenario_name,
-            self.win.mapping,
-            controls["locked_features"],
-            controls["zone_targets"],
-            controls["special_targets"],
-            self.win.global_params,
-            self.win.current_matrix,
-        )
+            # 正确获取 mapping，切勿使用 win.mapping
+            mapping = getattr(win, "confirmed_mapping", {})
+            eco_features = []
+            for role, cols in mapping.items():
+                if "生态" in role or "MPZ" in role:
+                    eco_features.extend(cols)
 
-        self.handlers._refresh_view_combo()
-        win.ui.view_combo.setCurrentText("Scenario_Zoning")
+            # 目前暂不使用特殊计算，保留论文原始结构
+            special_targets = {}
 
-        QApplication.restoreOverrideCursor()
-        QMessageBox.information(win, f"{scenario_name} Gurobi 优化完毕", report)
+            # 将 SCI 状态送入引擎
+            if "cb_sci" in controls:
+                win.global_params["enable_sci"] = controls["cb_sci"].isChecked()
+
+            from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+
+            current_matrix = (
+                win.custom_conflict_matrix
+                if win.custom_conflict_matrix
+                else DEFAULT_CONFLICT_MATRIX_10
+            )
+
+            # 【关键修复】：这里传的是 mapping，绝对不能写成 win.mapping
+            win.final_grid, report = resolve_scenario_allocation(
+                win.final_grid,
+                scenario_name,
+                mapping,
+                locked_features,
+                zone_targets,
+                special_targets,
+                win.global_params,
+                current_matrix,
+            )
+
+            self.handlers._refresh_view_combo()
+            win.ui.view_combo.setCurrentText("Scenario_Zoning")
+
+            QApplication.restoreOverrideCursor()
+            QMessageBox.information(win, f"{scenario_name} 优化完毕", report)
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(win, "推演错误", str(e))
