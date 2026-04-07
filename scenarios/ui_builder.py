@@ -5,12 +5,15 @@ from PyQt6.QtWidgets import (
     QLabel,
     QTabWidget,
     QGroupBox,
-    QFormLayout,
-    QSpinBox,
-    QScrollArea,
     QGridLayout,
     QHBoxLayout,
+    QSpinBox,
+    QScrollArea,
+    QCheckBox,
+    QFileDialog,
+    QMessageBox,
 )
+import json
 
 
 class ScenarioUIBuilder:
@@ -28,8 +31,6 @@ class ScenarioUIBuilder:
         layout.addWidget(QLabel("<b>⚙️ 情景沙盘实验室 (Gurobi Engine)</b>"))
 
         self.ui.scenario_tabs = QTabWidget()
-
-        # 【论文同款情景】
         scenarios = ["保持现状", "均衡发展", "保护优先", "开发优先", "利益相关者偏好"]
         for sc in scenarios:
             tab = QWidget()
@@ -48,12 +49,24 @@ class ScenarioUIBuilder:
 
         controls = {"target_spins": {}, "locked_features": [], "special_targets": {}}
 
-        # 1. 弹出式：绝对锁定要素
-        gb_lock = QGroupBox("🔒 空间锁定 (Gurobi 绝对约束)")
+        # --- 新增：配置存档与载入 ---
+        gb_io = QGroupBox("💾 情景参数存档")
+        h_io = QHBoxLayout()
+        btn_save = QPushButton("保存本情景配置")
+        controls["btn_save"] = btn_save
+        btn_load = QPushButton("载入配置")
+        controls["btn_load"] = btn_load
+        h_io.addWidget(btn_save)
+        h_io.addWidget(btn_load)
+        gb_io.setLayout(h_io)
+        l.addWidget(gb_io)
+
+        # 1. 绝对锁定要素
+        gb_lock = QGroupBox("🔒 空间锁定 (既定事实绝对约束)")
         hl1 = QHBoxLayout()
         btn_lock = QPushButton("配置强制锁定海域...")
         controls["btn_lock"] = btn_lock
-        lbl_lock_status = QLabel("已锁定: 0 项")
+        lbl_lock_status = QLabel("未锁定")
         lbl_lock_status.setStyleSheet("color: gray;")
         controls["lbl_lock_status"] = lbl_lock_status
         hl1.addWidget(btn_lock)
@@ -61,13 +74,23 @@ class ScenarioUIBuilder:
         gb_lock.setLayout(hl1)
         l.addWidget(gb_lock)
 
-        # 2. 分类海域目标配额 (对标 2025 论文参数)
+        # --- 新增：SCI 对比开关 ---
+        gb_sci = QGroupBox("🔬 空间拥挤度 (SCI) 实验对照")
+        h_sci = QHBoxLayout()
+        cb_sci = QCheckBox("启用 SCI 动态加权以惩罚高冲突区边界")
+        cb_sci.setChecked(True)
+        controls["cb_sci"] = cb_sci
+        h_sci.addWidget(cb_sci)
+        gb_sci.setLayout(h_sci)
+        l.addWidget(gb_sci)
+
+        # 2. 分类海域目标配额
         gb_target = QGroupBox("🎯 全局分区约束占比 (%)")
         gl = QGridLayout()
         categories = {
-            "🟢 保育类 (Conservation)": ["Z1_MPZ", "Z5_TZE"],
-            "🔵 社区与渔业 (Community/Fishery)": ["Z6_FZT", "Z7_FZC", "Z8_FZA"],
-            "🟠 开发与矿运 (Development/Mining)": ["Z2_UIZ", "Z3_PSZ", "Z4_TZ"],
+            "🟢 保育类": ["Z1_MPZ", "Z5_TZE"],
+            "🔵 社区与渔业": ["Z6_FZT", "Z7_FZC", "Z8_FZA"],
+            "🟠 开发与矿运": ["Z2_UIZ", "Z3_PSZ", "Z4_TZ"],
         }
 
         row = 0
@@ -81,7 +104,7 @@ class ScenarioUIBuilder:
                 spin = QSpinBox()
                 spin.setRange(0, 100)
 
-                # 参考 2025 MSP 论文各情景基准参数
+                # 同款 2025 论文基准参数预设
                 if "保护优先" in scenario_name:
                     defaults = {
                         "MPZ": 45,
@@ -115,7 +138,7 @@ class ScenarioUIBuilder:
                         "PSZ": 20,
                         "TZ": 45,
                     }
-                else:  # 均衡发展 / 保持现状
+                else:
                     defaults = {
                         "MPZ": 25,
                         "TZE": 20,
@@ -136,18 +159,11 @@ class ScenarioUIBuilder:
                     row += 1
             if col != 0:
                 row += 1
-
         gb_target.setLayout(gl)
         l.addWidget(gb_target)
 
-        # 3. 基于 Holness 2022 的保护目标
-        gb_special = QGroupBox("🌟 阶梯式特保目标 (Holness 2022 算法)")
-        l.addWidget(gb_special)
-        # 该处按钮将调用后台的 Holness 算法自动计算目标百分比，存入 Gurobi
-
         scroll.setWidget(content_widget)
         main_layout.addWidget(scroll)
-
         btn_run = QPushButton(f"▶ 启动 {scenario_name.split('_')[0]} 求解")
         btn_run.setStyleSheet(
             "background-color: #E91E63; color: white; font-weight: bold; height: 45px;"

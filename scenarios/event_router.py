@@ -7,13 +7,14 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QListWidget,
     QPushButton,
+    QFileDialog,
     QFormLayout,
     QLabel,
 )
 from PyQt6.QtCore import Qt
 from core.scenario_engine import resolve_scenario_allocation
 import numpy as np
-from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+import json
 
 
 class ScenarioEventRouter:
@@ -34,6 +35,50 @@ class ScenarioEventRouter:
             controls["btn_lock"].clicked.connect(
                 lambda checked, name=sc_name: self.open_lock_dialog(name)
             )
+            controls["btn_save"].clicked.connect(
+                lambda checked, name=sc_name: self.save_scenario_config(name)
+            )
+            controls["btn_load"].clicked.connect(
+                lambda checked, name=sc_name: self.load_scenario_config(name)
+            )
+
+    def save_scenario_config(self, sc_name):
+        controls = self.win.ui.scenario_controls[sc_name]
+        data = {
+            "locked": controls["locked_features"],
+            "sci_enabled": controls["cb_sci"].isChecked(),
+            "targets": {
+                z: spin.value() for z, spin in controls["target_spins"].items()
+            },
+        }
+        path, _ = QFileDialog.getSaveFileName(
+            self.win, "保存情景配置", f"{sc_name}_config.json", "JSON (*.json)"
+        )
+        if path:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            QMessageBox.information(self.win, "成功", "参数已存档！")
+
+    def load_scenario_config(self, sc_name):
+        path, _ = QFileDialog.getOpenFileName(
+            self.win, "载入情景配置", "", "JSON (*.json)"
+        )
+        if path:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                controls = self.win.ui.scenario_controls[sc_name]
+                controls["locked_features"] = data.get("locked", [])
+                controls["lbl_lock_status"].setText(
+                    f"已锁定: {len(controls['locked_features'])} 项"
+                )
+                controls["cb_sci"].setChecked(data.get("sci_enabled", True))
+                for z, val in data.get("targets", {}).items():
+                    if z in controls["target_spins"]:
+                        controls["target_spins"][z].setValue(val)
+                QMessageBox.information(self.win, "成功", "配置已恢复！")
+            except Exception as e:
+                QMessageBox.warning(self.win, "错误", f"读取失败: {str(e)}")
 
     def switch_to_phase2(self):
         win = self.win
@@ -122,46 +167,23 @@ class ScenarioEventRouter:
         return target_percentages
 
     def run_scenario_zoning(self, scenario_name):
-        win = self.win
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            controls = win.ui.scenario_controls[scenario_name]
-            locked_features = controls["locked_features"]
-            zone_targets = {
-                z: spin.value() for z, spin in controls["target_spins"].items()
-            }
+        controls = self.win.ui.scenario_controls[scenario_name]
+        # 把 SCI 开关状态塞进全局参数里传过去
+        self.win.global_params["enable_sci"] = controls["cb_sci"].isChecked()
 
-            mapping = getattr(win, "confirmed_mapping", {})
-            eco_features = []
-            for role, cols in mapping.items():
-                if "生态" in role or "MPZ" in role:
-                    eco_features.extend(cols)
+        self.win.final_grid, report = resolve_scenario_allocation(
+            self.win.final_grid,
+            scenario_name,
+            self.win.mapping,
+            controls["locked_features"],
+            controls["zone_targets"],
+            controls["special_targets"],
+            self.win.global_params,
+            self.win.current_matrix,
+        )
 
-            special_targets = self._calculate_holness_targets(list(set(eco_features)))
+        self.handlers._refresh_view_combo()
+        win.ui.view_combo.setCurrentText("Scenario_Zoning")
 
-            # 删掉 self.handlers. 前缀
-            current_matrix = (
-                win.custom_conflict_matrix
-                if win.custom_conflict_matrix
-                else DEFAULT_CONFLICT_MATRIX_10
-            )
-
-            win.final_grid, report = resolve_scenario_allocation(
-                win.final_grid,
-                scenario_name,
-                mapping,
-                locked_features,
-                zone_targets,
-                special_targets,
-                win.global_params,
-                current_matrix,
-            )
-
-            self.handlers._refresh_view_combo()
-            win.ui.view_combo.setCurrentText("Scenario_Zoning")
-
-            QApplication.restoreOverrideCursor()
-            QMessageBox.information(win, f"{scenario_name} Gurobi 优化完毕", report)
-        except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(win, "推演错误", str(e))
+        QApplication.restoreOverrideCursor()
+        QMessageBox.information(win, f"{scenario_name} Gurobi 优化完毕", report)
