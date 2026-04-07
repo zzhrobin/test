@@ -122,22 +122,23 @@ def resolve_scenario_allocation(
     # 3. 提取空间相邻边 (Edges) 与动态 SCI 权重
     edges, weights = [], []
 
-    # ==== 补充丢失的 Gurobi 调起逻辑 ====
+    # ==========================================
+    # 补充丢失的 Gurobi 调起逻辑
+    # ==========================================
     is_mandatory = global_params.get("is_mandatory", True)
     time_limit = global_params.get("gurobi_time", 300)
     mip_gap = global_params.get("gurobi_gap", 0.05)
 
-    # 1. 转换冲突矩阵为二维数组 (供 Gurobi 读取)
+    # 转换冲突矩阵为二维数组
     conflict_matrix_2d = np.zeros((num_zones, num_zones))
     for i, z1 in enumerate(ZONES_10):
         for j, z2 in enumerate(ZONES_10):
             conflict_matrix_2d[i, j] = custom_matrix.get(z1, {}).get(z2, 0.0)
 
-    # 2. 生成锁定网格数据 (提取UI勾选的锁定项)
+    # 生成锁定网格数据
     locked_data = []
     for feat in locked_features:
         if feat in grid_gdf.columns:
-            # 推断锁定的目标分区
             target_zone = next((z for z in ZONES_10 if z.split("_")[1] in feat), None)
             if target_zone:
                 target_j = ZONES_10.index(target_zone)
@@ -145,7 +146,6 @@ def resolve_scenario_allocation(
                 for cell_idx in feat_cells:
                     locked_data.append((cell_idx, target_j))
 
-    # 3. 正式调起 Gurobi 引擎
     logs.append(f"⚙️ 启动 Gurobi (TimeLimit={time_limit}s, Gap={mip_gap}) ...")
     g_solution, g_msg = run_gurobi_optimization(
         total_cells,
@@ -161,7 +161,7 @@ def resolve_scenario_allocation(
         is_mandatory,
     )
     logs.append(g_msg)
-    # =====================================
+    # ==========================================
 
     if g_solution is not None:
         final_zones = []

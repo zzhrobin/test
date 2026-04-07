@@ -91,9 +91,15 @@ class MainWindow(QMainWindow):
             self.handlers.run_fishery_cost_calculation
         )
         self.ui.btn_edit_matrix.clicked.connect(self.handlers.open_matrix_editor)
+        # --- 修正这里：重新绑定咱们拆分后的两个新函数 ---
+        if hasattr(self.ui, "btn_run_current_conflict"):
+            self.ui.btn_run_current_conflict.clicked.connect(
+                self.handlers.run_current_conflict_calculation
+            )
         self.ui.btn_run_conflict.clicked.connect(
             self.handlers.run_base_cost_calculation
         )
+        # ----------------------------------------------
         self.ui.btn_run_total_cost.clicked.connect(
             self.handlers.run_total_cost_calculation
         )
@@ -104,8 +110,3 @@ class MainWindow(QMainWindow):
         self.ui.btn_confirm_roles.clicked.connect(
             self.handlers.open_role_confirmation_dialog
         )
-        # 正确对接按钮2和按钮3
-        if hasattr(self.ui, "btn_run_current_conflict"):
-            self.ui.btn_run_current_conflict.clicked.connect(
-                self.handlers.run_current_conflict_calculation
-            )
