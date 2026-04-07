@@ -3,7 +3,6 @@ import geopandas as gpd
 from scipy.ndimage import gaussian_filter
 from core.gurobi_engine import run_gurobi_optimization
 
-# 确保安装了 libpysal： pip install libpysal
 try:
     import libpysal
 
@@ -31,26 +30,19 @@ def redistribute_fishery_costs(grid_gdf, locked_indices, unlocked_indices):
         col_name = f"Cost_L_{z}"
         if col_name not in grid_gdf.columns:
             continue
-
-        # 提取被锁定/挤压区域的渔业总成本
         displaced_cost = grid_gdf.loc[locked_indices, col_name].sum()
         if displaced_cost > 0:
-            # 找到可以接受均摊的自由网格 (原本就有该渔业潜力的)
             valid_mask = (grid_gdf.index.isin(unlocked_indices)) & (
                 grid_gdf[col_name] > 0
             )
             valid_idx = grid_gdf[valid_mask].index
-
             if len(valid_idx) > 0:
                 base_sum = grid_gdf.loc[valid_idx, col_name].sum()
                 if base_sum > 0:
-                    # 按原本的适宜性权重分配
                     weights = grid_gdf.loc[valid_idx, col_name] / base_sum
                     grid_gdf.loc[valid_idx, col_name] += displaced_cost * weights
                 else:
                     grid_gdf.loc[valid_idx, col_name] += displaced_cost / len(valid_idx)
-
-            # 将被锁定区的该项渔业成本清零
             grid_gdf.loc[locked_indices, col_name] = 0.0
     return grid_gdf
 
@@ -70,38 +62,36 @@ def resolve_scenario_allocation(
     num_zones = len(ZONES_10)
 
     # ==========================================
-    # 1. 提取精准的空间锁定约束
+    # 1. 提取精准的空间锁定约束 (【修复】字典去重，防止交叉重叠死锁)
     # ==========================================
     col_to_role = {c: role for role, cols in confirmed_mapping.items() for c in cols}
-    locked_data = []
-    locked_indices_set = set()
+    locked_dict = {}
 
     for feat in locked_features:
         if feat in grid_gdf.columns:
-            # 直接使用预检时的映射字典进行匹配
             role = col_to_role.get(feat)
             if role and role in ZONES_10:
                 target_j = ZONES_10.index(role)
                 feat_cells = np.where(grid_gdf[feat].fillna(0).values > 0)[0]
                 for cell_idx in feat_cells:
-                    locked_data.append((cell_idx, target_j))
-                    locked_indices_set.add(cell_idx)
+                    # 如果同一个格子被多个不同图层要求锁定，遵循“先到先得”，避免 Gurobi 逻辑崩溃
+                    if cell_idx not in locked_dict:
+                        locked_dict[cell_idx] = target_j
 
+    locked_data = [(k, v) for k, v in locked_dict.items()]
+    locked_indices_set = set(locked_dict.keys())
     unlocked_indices = list(set(range(total_cells)) - locked_indices_set)
-    logs.append(f"🔒 成功硬锁定 {len(locked_data)} 个既定事实网格。")
+    logs.append(f"🔒 成功硬锁定 {len(locked_data)} 个网格 (已自动消解空间重叠冲突)。")
 
     # ==========================================
-    # 2. 渔业成本平摊与全域极值归一化
+    # 2. 渔业平摊与归一化
     # ==========================================
-    # 执行渔业挤压成本均摊
     if locked_indices_set:
         grid_gdf = redistribute_fishery_costs(
             grid_gdf, list(locked_indices_set), unlocked_indices
         )
-        logs.append("🌊 渔业成本挤压与外溢平摊完成。")
 
     raw_cols = [f"Cost_L_{z}" for z in ZONES_10]
-
     if unlocked_indices:
         all_unlocked_data = grid_gdf.loc[unlocked_indices, raw_cols].values
         global_min, global_max = np.min(all_unlocked_data), np.max(all_unlocked_data)
@@ -110,9 +100,8 @@ def resolve_scenario_allocation(
         global_min, global_max = np.min(all_raw_data), np.max(all_raw_data)
 
     cost_matrix = np.zeros((total_cells, num_zones))
+    scen_prefix = "S_" + scenario_name.split(" ")[0]
 
-    # 在这个情景下，生成专属的归一化属性列
-    scen_prefix = "S_" + scenario_name.split(" ")[0]  # e.g., S_开发优先
     for idx, z in enumerate(ZONES_10):
         col_name = f"Cost_L_{z}"
         if global_max > global_min:
@@ -122,9 +111,7 @@ def resolve_scenario_allocation(
         else:
             norm_array = np.ones(total_cells)
 
-        # 保存专属属性，供用户在属性表中单独查看该情景的博弈成本
         grid_gdf[f"{scen_prefix}_Cost_{z}"] = norm_array
-
         grid_2d = np.full(
             (grid_gdf["row_idx"].max() + 1, grid_gdf["col_idx"].max() + 1), 101.0
         )
@@ -137,7 +124,7 @@ def resolve_scenario_allocation(
         )
 
     # ==========================================
-    # 3. 提取空间配额 (RZ和SPZ绝对不参与比例)
+    # 3. 提取空间配额 (【修复】防爆仓自适应压缩)
     # ==========================================
     zone_features = {z: [] for z in ZONES_10}
     for role, cols in confirmed_mapping.items():
@@ -153,6 +140,8 @@ def resolve_scenario_allocation(
             zone_features["Z6_FZT"].extend(cols)
 
     zone_quotas = []
+    total_quota_cells = 0
+
     for z in ZONES_10:
         if z in ["Z10_RZ", "Z9_SPZ"]:
             zone_quotas.append(0)
@@ -162,26 +151,44 @@ def resolve_scenario_allocation(
         feats = [f for f in zone_features[z] if f in grid_gdf.columns]
         if feats:
             footprint_mask = grid_gdf[feats].max(axis=1).values > 0
-            quota = int(np.sum(footprint_mask) * (pct / 100.0))
+            footprint_area = np.sum(footprint_mask)
+            quota = int(footprint_area * (pct / 100.0))
         else:
             quota = 0
+
         zone_quotas.append(quota)
+        total_quota_cells += quota
+        if quota > 0:
+            logs.append(
+                f"🎯 [{z.split('_')[1]}] 现有足迹 {footprint_area}，提取配额: {quota} 单元"
+            )
+
+    # 核心容量检查：如果总配额超过了可用海域，按比例压缩，强行保住模型不崩！
+    if total_quota_cells > (total_cells - len(locked_data)):
+        logs.append(
+            f"⚠️ 警告: 总配额({total_quota_cells}) 超过剩余可用空间！启用自适应压缩..."
+        )
+        safe_ratio = (total_cells - len(locked_data)) * 0.95 / total_quota_cells
+        zone_quotas = [int(q * safe_ratio) for q in zone_quotas]
 
     # ==========================================
-    # 4. 构建空间相邻拓扑 (激活 BLM 的关键)
+    # 4. 构建空间相邻拓扑 (【修复】FutureWarning)
     # ==========================================
     edges, weights = [], []
     blm_base = global_params.get("base_blm", 1.0)
+    enable_sci = global_params.get("enable_sci", True)
+
     if HAS_PY_SAL and blm_base > 0:
         logs.append("🌐 正在提取空间邻接矩阵 (Queen Contiguity)...")
-        w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf)
+        # 加上 use_index=False，彻底屏蔽底层警告
+        w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf, use_index=False)
         sci_col = "Conflict_Index" if "Conflict_Index" in grid_gdf.columns else None
 
         for i, neighbors in w.neighbors.items():
             for k in neighbors:
                 if i < k:
                     edges.append((i, k))
-                    if sci_col:
+                    if enable_sci and sci_col:
                         sci_w = (
                             (grid_gdf.at[i, sci_col] + grid_gdf.at[k, sci_col])
                             / 2.0
@@ -191,8 +198,6 @@ def resolve_scenario_allocation(
                     else:
                         weights.append(blm_base)
         logs.append(f"🔗 连片拓扑提取完成，共 {len(edges)} 条相交边界参与惩罚计算。")
-    else:
-        logs.append("⚠️ libpysal 未安装或 BLM 设为 0，将不执行连片惩罚！")
 
     # ==========================================
     # 5. 正式调起 Gurobi
