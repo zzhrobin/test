@@ -30,7 +30,7 @@ from core.grid_topology import generate_and_clean_grid, suggest_grid_size
 from core.spatial_intersect import intersect_features_to_grid
 from core.kde_engine import calculate_dual_sci
 from core.cost_engine import (
-    calculate_current_conflict,
+    calculate_current_conflict as calculate_conflict_index,
     calculate_base_transition_cost,
     calculate_total_cost,
     calculate_fishery_cost,
@@ -770,7 +770,8 @@ class EventHandlers:
         btn_confirm.clicked.connect(execute)
         dialog.exec()
 
-    def run_conflict_calculation(self):
+    def run_current_conflict_calculation(self):
+        """Updated function: Generate current conflicts"""
         win = self.win
         if win.final_grid is None:
             return
@@ -779,21 +780,21 @@ class EventHandlers:
                 win, "请先预检", "请先点击上方的【全局要素分类全域确认 (预检)】按钮！"
             )
             return
-
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            win.final_grid, report = calculate_conflict_index(
+            win.final_grid, report = calculate_current_conflict(
                 win.final_grid, win.confirmed_mapping, win.custom_conflict_matrix
             )
             self._refresh_view_combo()
             win.ui.view_combo.setCurrentText("Conflict_Index")
             QApplication.restoreOverrideCursor()
-            QMessageBox.information(win, "基础成本测算完成", report)
+            QMessageBox.information(win, "现状矛盾提取完成", report)
         except Exception as e:
             QApplication.restoreOverrideCursor()
             QMessageBox.critical(win, "计算错误", str(e))
 
-    def run_total_cost_calculation(self):
+    def run_base_cost_calculation(self):
+        """Updated function: Generate base transition costs"""
         win = self.win
         if win.final_grid is None:
             return
@@ -802,24 +803,41 @@ class EventHandlers:
                 win, "请先预检", "请先点击上方的【全局要素分类全域确认 (预检)】按钮！"
             )
             return
-
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            s_m = win.global_params.get("influence_strong_m", 1500.0)
-            w_m = win.global_params.get("influence_weak_m", 500.0)
-            base_c = win.global_params.get("holness_base_cost", 0.3)
-            win.final_grid, report = calculate_total_cost(
-                win.final_grid,
-                win.confirmed_mapping,
-                float(win.ui.grid_size_input.text()),
+            win.final_grid, report = calculate_base_transition_cost(
+                win.final_grid, win.confirmed_mapping, win.custom_conflict_matrix
             )
             self._refresh_view_combo()
-            win.ui.view_combo.setCurrentText("cost_conflict")
+            win.ui.view_combo.setCurrentText("Cost_to_Z1_MPZ")
             QApplication.restoreOverrideCursor()
-            QMessageBox.information(win, "综合成本结算完成", report)
+            QMessageBox.information(win, "基础转换成本测算完成", report)
         except Exception as e:
             QApplication.restoreOverrideCursor()
-            QMessageBox.critical(win, "错误", str(e))
+            QMessageBox.critical(win, "计算错误", str(e))
+
+    def run_total_cost_calculation(self):
+        """Updated function: Generate total transition costs"""
+        win = self.win
+        if win.final_grid is None:
+            return
+        if not hasattr(win, "confirmed_mapping") or not win.confirmed_mapping:
+            QMessageBox.warning(
+                win, "请先预检", "请先点击上方的【全局要素分类全域确认 (预检)】按钮！"
+            )
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            win.final_grid, report = calculate_total_transition_cost(
+                win.final_grid, win.confirmed_mapping, win.custom_conflict_matrix
+            )
+            self._refresh_view_combo()
+            win.ui.view_combo.setCurrentText("Total_Cost")
+            QApplication.restoreOverrideCursor()
+            QMessageBox.information(win, "总转换成本测算完成", report)
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(win, "计算错误", str(e))
 
     def open_matrix_editor(self):
         from PyQt6.QtWidgets import (
@@ -1064,8 +1082,8 @@ def on_run_development_scenario_clicked(self):
     """
     开发优先情景求解：严格按照排他锁定 -> 成本转移 -> 均一化 -> 目标提取的顺序
     """
-    from PyQt5.QtWidgets import QMessageBox, QApplication
-    from PyQt5.QtCore import Qt
+    from PyQt6.QtWidgets import QMessageBox, QApplication
+    from PyQt6.QtCore import Qt
 
     QApplication.setOverrideCursor(Qt.WaitCursor)
 
