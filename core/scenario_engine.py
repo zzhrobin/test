@@ -172,6 +172,53 @@ def resolve_adaptive_blm_enabled(global_params: dict) -> bool:
     )
 
 
+def build_queen_adjacency_edges(grid_gdf: gpd.GeoDataFrame) -> list[tuple[int, int]]:
+    """Build Queen adjacency candidate edges for optimizer boundary penalties."""
+    if HAS_PY_SAL:
+        w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf, use_index=False)
+        edges = []
+        for i, neighbors in w.neighbors.items():
+            for j in neighbors:
+                if i < j:
+                    edges.append((i, j))
+        return edges
+
+    return build_row_col_queen_adjacency_edges(grid_gdf)
+
+
+def build_row_col_queen_adjacency_edges(grid_gdf: gpd.GeoDataFrame) -> list[tuple[int, int]]:
+    """Build Queen adjacency candidate edges from row_idx/col_idx grid positions."""
+    required_cols = {"row_idx", "col_idx"}
+    if not required_cols.issubset(grid_gdf.columns):
+        missing = sorted(required_cols - set(grid_gdf.columns))
+        raise ValueError(
+            "Cannot build fallback Queen adjacency without columns: "
+            + ", ".join(missing)
+        )
+
+    by_cell = {}
+    for pos, row in grid_gdf.reset_index(drop=True).iterrows():
+        key = (int(row["row_idx"]), int(row["col_idx"]))
+        if key in by_cell:
+            raise ValueError(
+                "Cannot build fallback Queen adjacency with duplicate row_idx/col_idx: "
+                f"{key}."
+            )
+        by_cell[key] = pos
+
+    edges = set()
+    for (row_idx, col_idx), pos in by_cell.items():
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                if dr == 0 and dc == 0:
+                    continue
+                neighbor_pos = by_cell.get((row_idx + dr, col_idx + dc))
+                if neighbor_pos is not None:
+                    edges.add(tuple(sorted((pos, neighbor_pos))))
+
+    return sorted(edges)
+
+
 def resolve_scenario_allocation(
     grid_gdf: gpd.GeoDataFrame,
     scenario_name: str,
@@ -305,14 +352,9 @@ def resolve_scenario_allocation(
     theta_min = global_params.get("theta_min", DEFAULT_METHOD_PARAMS["theta_min"])
     theta_max = global_params.get("theta_max", DEFAULT_METHOD_PARAMS["theta_max"])
 
-    if HAS_PY_SAL and blm_base > 0:
-        logs.append("🌐 正在提取空间邻接矩阵 (Queen Contiguity)...")
-        # 加上 use_index=False，彻底屏蔽底层警告
-        w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf, use_index=False)
-        for i, neighbors in w.neighbors.items():
-            for k in neighbors:
-                if i < k:
-                    edges.append((i, k))
+    if blm_base > 0:
+        logs.append("Extracting Queen adjacency for boundary penalties...")
+        edges = build_queen_adjacency_edges(grid_gdf)
         edges, weights = build_boundary_edges_and_weights(
             grid_gdf,
             edges,
@@ -322,7 +364,10 @@ def resolve_scenario_allocation(
             theta_max=theta_max,
             sci_col="SCI_local",
         )
-        logs.append(f"🔗 连片拓扑提取完成，共 {len(edges)} 条相交边界参与惩罚计算。")
+        logs.append(
+            f"Boundary penalty edges ready: {len(edges)} shared-edge pairs "
+            f"({'libpysal' if HAS_PY_SAL else 'row_idx/col_idx fallback'})."
+        )
 
     # ==========================================
     # 5. 正式调起 Gurobi

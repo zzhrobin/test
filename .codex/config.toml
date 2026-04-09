@@ -1,0 +1,15 @@
+# Project-level Codex config
+# Keep this file in the repository at .codex/config.toml
+
+model = "gpt-5.4"
+
+[approval_policy]
+default = "on-request"
+
+[sandbox]
+default = "workspace-write"
+
+# Notes:
+# - Keep project-specific behavior in AGENTS.md.
+# - Prefer small, narrow changes.
+# - Use Phase 1 (inspection) before Phase 2 (editing) for non-trivial tasks.

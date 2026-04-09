@@ -7,6 +7,7 @@ from core.scenario_engine import (
     build_boundary_edges_and_weights,
     build_boundary_weights,
     build_raw_boundary_table,
+    build_row_col_queen_adjacency_edges,
     resolve_adaptive_blm_enabled,
 )
 
@@ -112,6 +113,54 @@ class ScenarioEngineAdaptiveBoundaryTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "non-polygon"):
             build_raw_boundary_table(grid, [(0, 1)])
+
+
+    def test_row_col_queen_fallback_builds_candidate_edges(self):
+        grid = gpd.GeoDataFrame(
+            {
+                "row_idx": [0, 0, 1, 1],
+                "col_idx": [0, 1, 0, 1],
+                "SCI_local": [0.0, 0.25, 0.5, 0.75],
+            },
+            geometry=[
+                box(0, 0, 1, 1),
+                box(1, 0, 2, 1),
+                box(0, 1, 1, 2),
+                box(1, 1, 2, 2),
+            ],
+            crs="EPSG:3857",
+        )
+
+        edges = build_row_col_queen_adjacency_edges(grid)
+
+        self.assertEqual(edges, [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)])
+
+    def test_row_col_fallback_edges_feed_shared_boundary_filter(self):
+        grid = gpd.GeoDataFrame(
+            {
+                "row_idx": [0, 0, 1, 1],
+                "col_idx": [0, 1, 0, 1],
+                "SCI_local": [0.0, 0.25, 0.5, 0.75],
+            },
+            geometry=[
+                box(0, 0, 1, 1),
+                box(1, 0, 2, 1),
+                box(0, 1, 1, 2),
+                box(1, 1, 2, 2),
+            ],
+            crs="EPSG:3857",
+        )
+        candidate_edges = build_row_col_queen_adjacency_edges(grid)
+
+        edges, weights = build_boundary_edges_and_weights(
+            grid,
+            candidate_edges,
+            base_blm=2.0,
+            enable_adaptive_blm=False,
+        )
+
+        self.assertEqual(edges, [(0, 1), (0, 2), (1, 3), (2, 3)])
+        self.assert_list_almost_equal(weights, [2.0, 2.0, 2.0, 2.0])
 
     def test_enable_adaptive_blm_alias_takes_priority_over_enable_sci(self):
         self.assertFalse(
