@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+from core.method_params import DEFAULT_METHOD_PARAMS
 
 class MetadataLogger:
     def __init__(self):
@@ -10,8 +11,11 @@ class MetadataLogger:
             "project": "Balikpapan Bay MSP SDSS",
             "grid_settings": {},
             "sci_kde_settings": {
-                "sigma_short": 3.0,
-                "sigma_long": 10.0,
+                "alpha": DEFAULT_METHOD_PARAMS["sci_alpha"],
+                "beta": DEFAULT_METHOD_PARAMS["sci_beta"],
+                "geometry_window": DEFAULT_METHOD_PARAMS["sci_geometry_window"],
+                "sigma_long": DEFAULT_METHOD_PARAMS["sci_sigma_long"],
+                "group_weights": DEFAULT_METHOD_PARAMS["sci_group_weights"],
                 "robust_normalization": True
             },
             "conflict_matrix_snapshot": DEFAULT_CONFLICT_MATRIX_10,

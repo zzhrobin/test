@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout
 from .ui_setup import UISetup
 from .event_handlers import EventHandlers
 from .plotting import PlottingManager
+from core.method_params import DEFAULT_METHOD_PARAMS, resolve_method_params
 
 
 class MainWindow(QMainWindow):
@@ -34,13 +35,17 @@ class MainWindow(QMainWindow):
             "holness_base_cost": 0.3,
             "influence_strong_m": 1500.0,
             "influence_weak_m": 500.0,
-            "sci_sigma_short": 3.0,
-            "sci_sigma_long": 10.0,
+            "gurobi_time": 300,
+            "gurobi_gap": 0.05,
+            "is_mandatory": True,
+            **DEFAULT_METHOD_PARAMS,
         }
         if os.path.exists(self.config_file):
             try:
                 with open(self.config_file, "r", encoding="utf-8") as file:
-                    self.global_params = json.load(file)
+                    loaded_params = json.load(file)
+                self.global_params = {**default_params, **loaded_params}
+                self.global_params.update(resolve_method_params(loaded_params))
             except Exception:
                 self.global_params = default_params
         else:

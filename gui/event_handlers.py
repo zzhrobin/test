@@ -41,6 +41,7 @@ from core.crs_manager import assess_and_recommend_crs, align_layer_crs
 from scenarios.event_router import ScenarioEventRouter  # 引入第二阶段路由
 
 from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+from core.method_params import DEFAULT_METHOD_PARAMS, resolve_method_params
 
 
 class EventHandlers:
@@ -287,10 +288,12 @@ class EventHandlers:
     def run_kde_calculation(self):
         win = self.win
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        s_short = win.global_params.get("sci_sigma_short", 3.0)
-        s_long = win.global_params.get("sci_sigma_long", 10.0)
+        method_params = resolve_method_params(win.global_params)
         win.final_grid = calculate_dual_sci(
-            win.final_grid, self._parse_tree_classifications(), s_short, s_long, True
+            win.final_grid,
+            self._parse_tree_classifications(),
+            robust_norm=True,
+            method_params=method_params,
         )
         self._refresh_view_combo()
         win.ui.view_combo.setCurrentText("SCI")
@@ -434,16 +437,44 @@ class EventHandlers:
         spin_sci_short = QDoubleSpinBox()
         spin_sci_short.setRange(0.1, 50.0)
         spin_sci_short.setSingleStep(0.5)
-        spin_sci_short.setValue(self.win.global_params.get("sci_sigma_short", 3.0))
+        spin_sci_short.setValue(
+            self.win.global_params.get("sci_sigma_short", DEFAULT_METHOD_PARAMS["sci_sigma_short"])
+        )
         spin_sci_long = QDoubleSpinBox()
         spin_sci_long.setRange(0.1, 100.0)
         spin_sci_long.setSingleStep(1.0)
-        spin_sci_long.setValue(self.win.global_params.get("sci_sigma_long", 10.0))
+        spin_sci_long.setValue(
+            self.win.global_params.get("sci_sigma_long", DEFAULT_METHOD_PARAMS["sci_sigma_long"])
+        )
+        spin_sci_alpha = QDoubleSpinBox()
+        spin_sci_alpha.setRange(0.0, 1.0)
+        spin_sci_alpha.setSingleStep(0.05)
+        spin_sci_alpha.setValue(
+            self.win.global_params.get("sci_alpha", DEFAULT_METHOD_PARAMS["sci_alpha"])
+        )
+        spin_sci_beta = QDoubleSpinBox()
+        spin_sci_beta.setRange(0.0, 1.0)
+        spin_sci_beta.setSingleStep(0.05)
+        spin_sci_beta.setValue(
+            self.win.global_params.get("sci_beta", DEFAULT_METHOD_PARAMS["sci_beta"])
+        )
 
         spin_blm = QDoubleSpinBox()
         spin_blm.setRange(0.0, 100.0)
         spin_blm.setSingleStep(0.5)
-        spin_blm.setValue(self.win.global_params.get("base_blm", 1.0))
+        spin_blm.setValue(self.win.global_params.get("base_blm", DEFAULT_METHOD_PARAMS["base_blm"]))
+        spin_theta_min = QDoubleSpinBox()
+        spin_theta_min.setRange(0.0, 10.0)
+        spin_theta_min.setSingleStep(0.05)
+        spin_theta_min.setValue(
+            self.win.global_params.get("theta_min", DEFAULT_METHOD_PARAMS["theta_min"])
+        )
+        spin_theta_max = QDoubleSpinBox()
+        spin_theta_max.setRange(0.0, 10.0)
+        spin_theta_max.setSingleStep(0.05)
+        spin_theta_max.setValue(
+            self.win.global_params.get("theta_max", DEFAULT_METHOD_PARAMS["theta_max"])
+        )
         spin_gurobi = QSpinBox()
         spin_gurobi.setRange(10, 3600)
         spin_gurobi.setSingleStep(60)
@@ -461,7 +492,11 @@ class EventHandlers:
         layout.addRow("渔业空间：生计极限距离 (km):", spin_fish_dist)
         layout.addRow("向海辐射：强压力源惩罚半径 (m):", spin_strong)
         layout.addRow("拥挤指数：SCI 短高斯半径:", spin_sci_short)
+        layout.addRow("SCI alpha geometry weight:", spin_sci_alpha)
+        layout.addRow("SCI beta human-use weight:", spin_sci_beta)
         layout.addRow("【原著】Gurobi 基础边界惩罚 (Base BLM):", spin_blm)
+        layout.addRow("Adaptive BLM theta min:", spin_theta_min)
+        layout.addRow("Adaptive BLM theta max:", spin_theta_max)
         layout.addRow("【原著】Gurobi 求解容差 (MIP Gap 0.05):", spin_gap)
         layout.addRow("【原著】Gurobi 最大求解时间 (秒):", spin_gurobi)
         layout.addRow("【原著】空间策略:", cb_mandatory)
@@ -483,7 +518,11 @@ class EventHandlers:
                     "influence_weak_m": spin_weak.value(),
                     "sci_sigma_short": spin_sci_short.value(),
                     "sci_sigma_long": spin_sci_long.value(),
+                    "sci_alpha": spin_sci_alpha.value(),
+                    "sci_beta": spin_sci_beta.value(),
                     "base_blm": spin_blm.value(),
+                    "theta_min": spin_theta_min.value(),
+                    "theta_max": spin_theta_max.value(),
                     "gurobi_time": spin_gurobi.value(),
                     "gurobi_gap": spin_gap.value(),
                     "is_mandatory": cb_mandatory.isChecked(),

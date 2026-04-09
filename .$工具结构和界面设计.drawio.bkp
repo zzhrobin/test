@@ -1,0 +1,82 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6">
+  <diagram name="第 1 页" id="PtlOqBJ0bb4zpiiB8b5D">
+    <mxGraphModel dx="1105" dy="888" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-5" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-9" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="上传研究区域" vertex="1">
+          <mxGeometry height="60" width="120" x="60" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-7" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-4" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="·检查坐标系&lt;div&gt;·读取经纬度&lt;/div&gt;&lt;div&gt;·转化为投影坐标系&lt;/div&gt;&lt;div&gt;·记录投影坐标系&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="400" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-6" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="&lt;div&gt;·经纬度&lt;div&gt;·全系统统一坐标系&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="707" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-11" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-18" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-8" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="规划单元尺寸选择" vertex="1">
+          <mxGeometry height="60" width="120" x="60" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-13" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-10" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="·读取研究区域面积&lt;div&gt;·按两万个格子左右建议规划单元尺寸&lt;/div&gt;&lt;div&gt;·满足整百或者整50，便于计算&lt;/div&gt;&lt;div&gt;·进行研究区域规划单元格区分&lt;/div&gt;&lt;div&gt;·检查规划单元之间的空间关系，邻边都是哪些格子&lt;/div&gt;" vertex="1">
+          <mxGeometry height="85" width="200" x="360" y="297.5" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-12" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="· 规划单元尺寸(m)&lt;div&gt;·规划单元，面shp&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="707" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="数据" vertex="1">
+          <mxGeometry height="30" width="60" x="737" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&amp;nbsp;数据处理" vertex="1">
+          <mxGeometry height="30" width="60" x="430" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="功能描述" vertex="1">
+          <mxGeometry height="30" width="70" x="85" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-20" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-19" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-24" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-23" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-17" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="要素上传" vertex="1">
+          <mxGeometry height="60" width="120" x="60" y="486.25" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-22" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-21" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-19" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="·不同类型上传接不同接口（一般要素和生态要素）&lt;div&gt;·都先检查坐标系，转换到全系统统一坐标系&lt;/div&gt;&lt;div&gt;·读取属性表某列的文本，作为要素名显示，并作为列名，在规划单元shp属性表中添加列&lt;/div&gt;&lt;div&gt;·检查要素文件类型，检查对应相交规则&lt;/div&gt;&lt;div&gt;·一般要素点，线文件有接触就符合，面文件需要超过50%；生态要素全部类型都是有接触就符合&lt;/div&gt;&lt;div&gt;·上传要素与规划单元相交，符合相交规则的部分，在规划单元shp属性表对应列赋值100，显示该单元格中存在该要素&lt;/div&gt;&lt;div&gt;· 若上传要素的属性表检查不是文本，而是年份数字，则先请用户对这一要素在要素矩阵中的名称命名（不超过10字符）&lt;/div&gt;&lt;div&gt;·再对要素矩阵中该要素对应列排序，从最新年份到最老年份再到没有相交元素的0，从100开始按比例赋值（有相交的格子最少也不能是0，没有相交的部分才是0，0最小不能小于0）&lt;/div&gt;&lt;div&gt;·要素上传后提供粗分类，为大类（海洋要素，陆地要素），这两个大类下各有生态要素和普通要素两类。&lt;/div&gt;&lt;div&gt;·后续功能检索也根据分类提供选项&lt;/div&gt;" vertex="1">
+          <mxGeometry height="252.5" width="430" x="245" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-21" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="·规划单元属性表要素列&lt;div&gt;·要素分布情况&lt;/div&gt;&lt;div&gt;·要素名粗分类&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="133" x="700.5" y="486.25" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-26" edge="1" parent="1" source="bfkDZkSz8QxWnvJyUEP_-23" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="bfkDZkSz8QxWnvJyUEP_-25" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-23" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="拥挤度计算" vertex="1">
+          <mxGeometry height="60" width="120" x="60" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="bfkDZkSz8QxWnvJyUEP_-25" parent="1" style="whiteSpace=wrap;html=1;rounded=0;" value="核密度估计 (Kernel Density Estimation, KDE)" vertex="1">
+          <mxGeometry height="60" width="260" x="330" y="800" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

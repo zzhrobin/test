@@ -1,7 +1,11 @@
 import numpy as np
 import geopandas as gpd
+import pandas as pd
+from shapely.errors import ShapelyError
 from scipy.ndimage import gaussian_filter
+from core.adaptive_boundary import apply_adaptive_boundary_multiplier
 from core.gurobi_engine import run_gurobi_optimization
+from core.method_params import DEFAULT_METHOD_PARAMS
 
 try:
     import libpysal
@@ -45,6 +49,127 @@ def redistribute_fishery_costs(grid_gdf, locked_indices, unlocked_indices):
                     grid_gdf.loc[valid_idx, col_name] += displaced_cost / len(valid_idx)
             grid_gdf.loc[locked_indices, col_name] = 0.0
     return grid_gdf
+
+
+def build_boundary_weights(
+    grid_gdf: gpd.GeoDataFrame,
+    edges: list[tuple[int, int]],
+    base_blm: float,
+    enable_adaptive_blm: bool,
+    *,
+    theta_min: float = DEFAULT_METHOD_PARAMS["theta_min"],
+    theta_max: float = DEFAULT_METHOD_PARAMS["theta_max"],
+    sci_col: str = "SCI_local",
+) -> list[float]:
+    """Build optimizer-ready boundary penalties for adjacent planning units."""
+    _, weights = build_boundary_edges_and_weights(
+        grid_gdf,
+        edges,
+        base_blm,
+        enable_adaptive_blm,
+        theta_min=theta_min,
+        theta_max=theta_max,
+        sci_col=sci_col,
+    )
+    return weights
+
+
+def build_boundary_edges_and_weights(
+    grid_gdf: gpd.GeoDataFrame,
+    edges: list[tuple[int, int]],
+    base_blm: float,
+    enable_adaptive_blm: bool,
+    *,
+    theta_min: float = DEFAULT_METHOD_PARAMS["theta_min"],
+    theta_max: float = DEFAULT_METHOD_PARAMS["theta_max"],
+    sci_col: str = "SCI_local",
+) -> tuple[list[tuple[int, int]], list[float]]:
+    """Build filtered boundary edges and optimizer-ready penalties."""
+    if not edges:
+        return [], []
+
+    raw_boundary = build_raw_boundary_table(grid_gdf, edges)
+    effective_boundary = raw_boundary[raw_boundary["B_ij"] > 0.0].copy()
+
+    if not enable_adaptive_blm:
+        return _edges_from_boundary_table(effective_boundary), (
+            base_blm * effective_boundary["B_ij"]
+        ).tolist()
+
+    adaptive_boundary = apply_adaptive_boundary_multiplier(
+        grid_gdf,
+        effective_boundary,
+        theta_min=theta_min,
+        theta_max=theta_max,
+        sci_col=sci_col,
+    )
+    return _edges_from_boundary_table(adaptive_boundary), (
+        base_blm * adaptive_boundary["B_ij_star"]
+    ).tolist()
+
+
+def build_raw_boundary_table(
+    grid_gdf: gpd.GeoDataFrame,
+    edges: list[tuple[int, int]],
+) -> pd.DataFrame:
+    """Return raw shared-boundary lengths for Queen-adjacent planning units."""
+    _validate_boundary_geometries(grid_gdf)
+    rows = []
+    geometries = grid_gdf.geometry
+
+    for i, j in edges:
+        try:
+            shared_boundary = geometries.iloc[i].boundary.intersection(
+                geometries.iloc[j].boundary
+            )
+            boundary_length = float(shared_boundary.length)
+        except (IndexError, ShapelyError, AttributeError, TypeError) as exc:
+            raise ValueError(
+                f"Could not compute shared boundary length for edge ({i}, {j})."
+            ) from exc
+        rows.append({"i": i, "j": j, "B_ij": boundary_length})
+
+    return pd.DataFrame(rows, columns=["i", "j", "B_ij"])
+
+
+def _validate_boundary_geometries(grid_gdf: gpd.GeoDataFrame) -> None:
+    if grid_gdf.crs is None:
+        raise ValueError(
+            "Cannot compute shared boundary lengths because grid_gdf has no CRS."
+        )
+    if grid_gdf.crs.is_geographic:
+        raise ValueError(
+            "Cannot compute shared boundary lengths in a geographic CRS; "
+            "use a projected CRS with linear units."
+        )
+    if grid_gdf.geometry.isna().any() or grid_gdf.geometry.is_empty.any():
+        raise ValueError("Cannot compute shared boundary lengths with empty geometry.")
+    invalid_mask = ~grid_gdf.geometry.is_valid
+    if invalid_mask.any():
+        bad_indices = grid_gdf.index[invalid_mask].tolist()
+        raise ValueError(
+            "Cannot compute shared boundary lengths with invalid geometry at "
+            f"indices: {bad_indices}."
+        )
+    polygonal_mask = grid_gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])
+    if not polygonal_mask.all():
+        bad_types = sorted(set(grid_gdf.geometry.geom_type[~polygonal_mask]))
+        raise ValueError(
+            "Cannot compute shared boundary lengths for non-polygon geometry types: "
+            + ", ".join(bad_types)
+        )
+
+
+def _edges_from_boundary_table(boundary_table: pd.DataFrame) -> list[tuple[int, int]]:
+    return list(boundary_table[["i", "j"]].itertuples(index=False, name=None))
+
+
+def resolve_adaptive_blm_enabled(global_params: dict) -> bool:
+    """Prefer enable_adaptive_blm while preserving enable_sci compatibility."""
+    return global_params.get(
+        "enable_adaptive_blm",
+        global_params.get("enable_sci", True),
+    )
 
 
 def resolve_scenario_allocation(
@@ -175,28 +300,28 @@ def resolve_scenario_allocation(
     # 4. 构建空间相邻拓扑 (【修复】FutureWarning)
     # ==========================================
     edges, weights = [], []
-    blm_base = global_params.get("base_blm", 1.0)
-    enable_sci = global_params.get("enable_sci", True)
+    blm_base = global_params.get("base_blm", DEFAULT_METHOD_PARAMS["base_blm"])
+    enable_adaptive_blm = resolve_adaptive_blm_enabled(global_params)
+    theta_min = global_params.get("theta_min", DEFAULT_METHOD_PARAMS["theta_min"])
+    theta_max = global_params.get("theta_max", DEFAULT_METHOD_PARAMS["theta_max"])
 
     if HAS_PY_SAL and blm_base > 0:
         logs.append("🌐 正在提取空间邻接矩阵 (Queen Contiguity)...")
         # 加上 use_index=False，彻底屏蔽底层警告
         w = libpysal.weights.contiguity.Queen.from_dataframe(grid_gdf, use_index=False)
-        sci_col = "Conflict_Index" if "Conflict_Index" in grid_gdf.columns else None
-
         for i, neighbors in w.neighbors.items():
             for k in neighbors:
                 if i < k:
                     edges.append((i, k))
-                    if enable_sci and sci_col:
-                        sci_w = (
-                            (grid_gdf.at[i, sci_col] + grid_gdf.at[k, sci_col])
-                            / 2.0
-                            / 100.0
-                        )
-                        weights.append(blm_base * sci_w)
-                    else:
-                        weights.append(blm_base)
+        edges, weights = build_boundary_edges_and_weights(
+            grid_gdf,
+            edges,
+            blm_base,
+            enable_adaptive_blm,
+            theta_min=theta_min,
+            theta_max=theta_max,
+            sci_col="SCI_local",
+        )
         logs.append(f"🔗 连片拓扑提取完成，共 {len(edges)} 条相交边界参与惩罚计算。")
 
     # ==========================================

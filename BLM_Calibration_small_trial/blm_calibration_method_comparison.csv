@@ -1,0 +1,5 @@
+﻿method,base_blm,status,error
+fixed_blm,0.0,error,Model too large for size-limited license; visit https://gurobi.com/unrestricted for more information
+sci_adaptive_blm,0.0,error,Model too large for size-limited license; visit https://gurobi.com/unrestricted for more information
+fixed_blm,1e-06,error,Model too large for size-limited license; visit https://gurobi.com/unrestricted for more information
+sci_adaptive_blm,1e-06,error,Model too large for size-limited license; visit https://gurobi.com/unrestricted for more information

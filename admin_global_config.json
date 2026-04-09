@@ -10,5 +10,16 @@
     "base_blm": 1.0,
     "gurobi_time": 300,
     "gurobi_gap": 0.05,
-    "is_mandatory": false
+    "is_mandatory": false,
+    "sci_alpha": 0.5,
+    "sci_beta": 0.5,
+    "sci_geometry_window": 3,
+    "theta_min": 0.2,
+    "theta_max": 1.0,
+    "sci_group_weights": {
+        "fixed_barriers": 1.0,
+        "linear_transit": 0.8,
+        "soft_competition": 0.5,
+        "excluded_from_sci": 0.0
+    }
 }

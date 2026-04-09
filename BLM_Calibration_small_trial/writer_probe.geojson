@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "writer_probe",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32750" } },
+"features": [
+{ "type": "Feature", "properties": { "a": 1 }, "geometry": { "type": "Point", "coordinates": [ 0.0, 0.0 ] } }
+]
+}

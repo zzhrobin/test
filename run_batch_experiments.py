@@ -6,9 +6,12 @@ from datetime import datetime
 from core.scenario_engine import resolve_scenario_allocation
 from run_sensitivity_paper import calculate_metrics
 
+# === 新增：导入系统默认冲突矩阵作为兜底 ===
+from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+
 
 def run_batch():
-    # 1. 指定你的进度文件路径 (请确保你已经在主界面保存了 msp_state.pkl)
+    # 1. 指定你的进度文件路径
     pkl_path = "msp_state.pkl"
     if not os.path.exists(pkl_path):
         print("❌ 找不到 msp_state.pkl！请先在软件主界面点击 [保存(pkl)]。")
@@ -20,8 +23,12 @@ def run_batch():
 
     grid_gdf = state["final_grid"]
     mapping = state.get("confirmed_mapping", {})
-    global_params = state.get("global_params", {})
-    custom_matrix = state.get("custom_matrix", {})
+
+    # ==========================================
+    # 🛡️ 核心修复：防止 NoneType 报错的兜底机制
+    # ==========================================
+    global_params = state.get("global_params") or {}
+    custom_matrix = state.get("custom_matrix") or DEFAULT_CONFLICT_MATRIX_10
 
     # 调大时间限制，防止复杂模型半路夭折 (单位：秒)
     global_params["gurobi_time"] = 1200
