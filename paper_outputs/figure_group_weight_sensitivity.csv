@@ -1,0 +1,6 @@
+﻿setting_label,theta_min,theta_max,sci_group_weights,objective_diff_adaptive_minus_fixed,boundary_diff_adaptive_minus_fixed,patch_diff_adaptive_minus_fixed,different_cells,fixed_adaptive_overlap_share
+baseline,0.2,1.0,"{""fixed_barriers"": 1.0, ""linear_transit"": 0.8, ""soft_competition"": 0.5}",-0.5699999999999363,1750.0,2,4,0.9998292058070024
+transit_heavier,0.2,1.0,"{""fixed_barriers"": 1.0, ""linear_transit"": 1.0, ""soft_competition"": 0.5}",-0.5599999999999454,1750.0,2,4,0.9998292058070024
+soft_heavier,0.2,1.0,"{""fixed_barriers"": 1.0, ""linear_transit"": 0.8, ""soft_competition"": 0.8}",-0.5799999999999272,1750.0,2,4,0.9998292058070024
+fixed_lighter,0.2,1.0,"{""fixed_barriers"": 0.8, ""linear_transit"": 0.8, ""soft_competition"": 0.5}",-0.5699999999999363,1750.0,2,4,0.9998292058070024
+compressed_weights,0.2,1.0,"{""fixed_barriers"": 1.0, ""linear_transit"": 0.9, ""soft_competition"": 0.7}",-0.5699999999999363,1750.0,2,4,0.9998292058070024

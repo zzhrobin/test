@@ -1,0 +1,4 @@
+﻿setting_label,theta_min,theta_max,sci_alpha,sci_beta,objective_diff_adaptive_minus_fixed,boundary_diff_adaptive_minus_fixed,patch_diff_adaptive_minus_fixed,different_cells,fixed_adaptive_overlap_share
+alpha_0.3_beta_0.7,0.2,1.0,0.3,0.7,-0.5699999999999363,1750.0,2,4,0.9998292058070024
+alpha_0.5_beta_0.5,0.2,1.0,0.5,0.5,-0.5699999999999363,1750.0,2,4,0.9998292058070024
+alpha_0.7_beta_0.3,0.2,1.0,0.7,0.3,-0.5699999999999363,1750.0,2,4,0.9998292058070024

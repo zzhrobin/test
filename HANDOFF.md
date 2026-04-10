@@ -33,117 +33,70 @@ Interpretation:
 - more flexibility in narrow inner-bay areas,
 - stronger compactness in open waters.
 
-## What has already been implemented
+## Current paper-ready state
 
-### 1. Adaptive boundary module
-A dedicated adaptive boundary module was added and tested.
-It computes:
-- `theta_i`
-- `theta_ij`
-- `B_ij_star`
+- Real macOS + Gurobi calibration succeeds on `msp_state.pkl`.
+- A nonzero BLM sweep confirmed `fixed_blm` and `sci_adaptive_blm` no longer collapse to identical outcomes.
+- The manuscript-facing default setting set is:
+  - `base_blm = 3e-4`
+  - `theta_min = 0.2`
+  - `theta_max = 1.0`
+  - `sci_alpha = 0.5`
+  - `sci_beta = 0.5`
+  - `sci_group_weights = {fixed_barriers: 1.0, linear_transit: 0.8, soft_competition: 0.5}`
 
-### 2. Scenario engine integration
-`scenario_engine.py` was updated so that:
-- adaptive BLM can be enabled/disabled,
-- effective penalty is `base_blm * B_ij_star`,
-- the pipeline no longer multiplies SCI directly into the objective.
+## Stability checks completed
 
-### 3. True boundary length
-Boundary logic was improved so `B_ij` is now based on true shared boundary length between adjacent polygons, not just adjacency constants.
-Corner-only contacts are removed from the effective boundary table.
+- `theta_min / theta_max` sensitivity at `base_blm = 3e-4`
+  - tested: `(0.2,1.0)`, `(0.4,1.0)`, `(0.1,1.0)`, `(0.2,0.8)`, `(0.3,0.9)`
+  - adaptive effect stayed present across all tested settings
+  - preferred moderate stability check: `(0.3,0.9)`
 
-### 4. SCI refactor
-SCI generation was refactored into:
-- geometry component,
-- human-use pressure component,
-- final `SCI_local` combination.
+- `sci_alpha / sci_beta` sensitivity at `base_blm = 3e-4`
+  - tested: `(0.3,0.7)`, `(0.5,0.5)`, `(0.7,0.3)`
+  - tested range was solution-stable
 
-Outputs now include:
-- `SCI_geometry`
-- `SCI_human_use`
-- `SCI_local`
-- `SCI` (kept for compatibility / plotting)
+- `sci_group_weights` sensitivity at `base_blm = 3e-4`
+  - tested:
+    - baseline `(1.0, 0.8, 0.5)`
+    - transit_heavier `(1.0, 1.0, 0.5)`
+    - soft_heavier `(1.0, 0.8, 0.8)`
+    - fixed_lighter `(0.8, 0.8, 0.5)`
+    - compressed_weights `(1.0, 0.9, 0.7)`
+  - adaptive-vs-fixed separation stayed stable across all tested weight settings
+  - preferred stability checks: `compressed_weights`, optionally `transit_heavier`
 
-### 5. Ecological exclusions
-Biodiversity/ecological value/protection categories were explicitly excluded from `SCI_local`.
+## Consolidated outputs
 
-### 6. Parameter centralization
-A single authoritative default parameter source was introduced in:
-- `core/method_params.py`
+Paper-ready summary tables, figure-ready CSVs, and manuscript-ready figure files are now under `paper_outputs/`:
 
-This centralizes defaults for:
-- `sci_alpha`
-- `sci_beta`
-- `sci_geometry_window`
-- `sci_sigma_short`
-- `sci_sigma_long`
-- `theta_min`
-- `theta_max`
-- `base_blm`
-- `sci_group_weights`
+- `calibration_summary_table.csv`
+- `theta_sensitivity_summary_table.csv`
+- `alpha_beta_sensitivity_summary_table.csv`
+- `group_weight_sensitivity_summary_table.csv`
+- `figure_blm_sweep.csv`
+- `figure_alpha_beta_sensitivity.csv`
+- `figure_theta_sensitivity.csv`
+- `figure_group_weight_sensitivity.csv`
+- `summary_notes.md`
+- `figures/blm_sweep.png`
+- `figures/blm_sweep.pdf`
+- `figures/theta_sensitivity.png`
+- `figures/theta_sensitivity.pdf`
+- `figures/group_weight_sensitivity.png`
+- `figures/group_weight_sensitivity.pdf`
 
-### 7. Calibration workflow scaffold
-A dedicated calibration/experiment script was added:
-- `run_blm_calibration_methods.py`
+Writing-support markdown outputs are now under `paper_outputs/writing_support/`:
 
-It currently supports comparison of:
-- `fixed_blm`
-- `sci_adaptive_blm`
-
-with exports including:
-- boundary length,
-- patch count,
-- largest patch share,
-- conflict/cost,
-- target achievement,
-- objective value,
-- baseline overlap.
-
-## Current known blockers / issues
-
-### 1. Windows local Gurobi limit
-A full run using the real workspace failed under the Windows environment because the local restricted Gurobi license rejected the large model.
-
-### 2. Small-trial run was not scientifically informative yet
-A derived 10x10 trial workspace ran successfully, but all methods and all tested `base_blm` values produced identical results.
-This strongly suggests that boundary penalties were not effectively entering the optimizer in that environment.
-
-### 3. Suspected cause
-The environment lacked `libpysal`, and the optimizer adjacency path may have skipped BLM-edge construction when `libpysal` was unavailable.
-This must be verified and, if needed, replaced with a robust fallback based on existing `row_idx` / `col_idx` Queen-neighborhood logic.
-
-### 4. Export note
-GeoPackage export failed in one workflow and was downgraded to GeoJSON fallback. This is acceptable for debugging but should be revisited if paper deliverables require GPKG.
+- `results_summary.md`
+- `figure_captions.md`
+- `methods_support.md`
+- manuscript-friendly markdown tables for calibration and sensitivity summaries
 
 ## Immediate next priority
-On macOS (with working Gurobi), prioritize:
 
-1. verify optimizer adjacency fallback when `libpysal` is unavailable,
-2. rerun a small real-data trial and confirm that fixed vs SCI-adaptive BLM can actually diverge,
-3. once divergence is confirmed, run broader `base_blm` calibration,
-4. then proceed to sensitivity analysis for:
-   - `theta_min/theta_max`
-   - `sci_alpha/sci_beta`
-   - group weights
-
-## Suggested next Codex task
-A good next task is:
-- inspect optimizer-edge construction in `scenario_engine.py`,
-- ensure fallback Queen adjacency is built without `libpysal`,
-- rerun the small calibration trial,
-- report whether fixed vs SCI-adaptive BLM now produce different metrics.
-
-## Important files to inspect first
-- `core/method_params.py`
-- `core/kde_engine.py`
-- `core/adaptive_boundary.py`
-- `core/scenario_engine.py`
-- `run_blm_calibration_methods.py`
-- relevant tests under `tests/`
-
-## Important constraints
-Do not:
-- reintroduce biodiversity/ecological layers into `SCI_local`,
-- collapse adaptive BLM back into direct SCI weighting in the objective,
-- replace true boundary length with adjacency constants,
-- make broad GUI changes unless explicitly requested.
+- turn `paper_outputs/`, `paper_outputs/figures/`, and `paper_outputs/writing_support/` into final manuscript section text, table placement, and figure placement,
+- keep the current default setting set as the main reported result,
+- use `theta_0.3_0.9` and `compressed_weights` as the main robustness checks,
+- keep alpha/beta table-only unless a reviewer-facing invariance figure is specifically needed,
+- only if paper framing requires it later, consider a very small extreme-case weight check.

@@ -1,0 +1,6 @@
+﻿base_blm,fixed_status,adaptive_status,fixed_objective_value,adaptive_objective_value,objective_diff_adaptive_minus_fixed,fixed_total_boundary_length,adaptive_total_boundary_length,boundary_diff_adaptive_minus_fixed,fixed_patch_count_8_neighbor,adaptive_patch_count_8_neighbor,patch_diff_adaptive_minus_fixed,fixed_largest_patch_share_8_neighbor,adaptive_largest_patch_share_8_neighbor,largest_patch_share_diff_adaptive_minus_fixed,fixed_target_min_achievement_ratio,adaptive_target_min_achievement_ratio,fixed_adaptive_overlap_share,different_cells,is_recommended_default_base_blm
+1e-06,solved,solved,1190.83,1190.83,0.0,174500.0,174500.0,0.0,64,64,0,0.9751067463706234,0.9751067463706234,0.0,1.0,1.0,1.0,0,False
+1e-05,solved,solved,1190.86,1190.84,-0.01999999999998181,174000.0,174500.0,500.0,63,64,1,0.9751067463706234,0.9751067463706234,0.0,1.0,1.0,0.9999146029035013,2,False
+0.0001,solved,solved,1191.13,1190.94,-0.19000000000005457,173500.0,174000.0,500.0,62,63,1,0.9751067463706234,0.9751067463706234,0.0,1.0,1.0,0.999871904355252,3,False
+0.0003,solved,solved,1191.71,1191.14,-0.5699999999999363,171750.0,173500.0,1750.0,60,62,2,0.9751067463706234,0.9751067463706234,0.0,1.0,1.0,0.9998292058070025,4,True
+0.001,solved,solved,1193.55,1191.77,-1.7799999999999727,169500.0,171000.0,1500.0,57,60,3,0.9751067463706234,0.9751067463706234,0.0,1.0,1.0,0.9996157130657558,9,False

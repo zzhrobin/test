@@ -25,6 +25,7 @@ import pandas as pd
 from scipy.ndimage import label
 
 from core.cost_engine import DEFAULT_CONFLICT_MATRIX_10
+from core.kde_engine import calculate_dual_sci
 from core.method_params import resolve_method_params
 from core.scenario_engine import (
     HAS_PY_SAL,
@@ -35,6 +36,7 @@ from core.scenario_engine import (
 
 DEFAULT_BLM_SWEEP = [0.0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
 DEFAULT_ZONE_TARGETS = {"Z2_UIZ": 15, "Z3_PSZ": 15, "Z4_TZ": 15, "Z6_FZT": 15}
+REQUIRED_SCI_COLUMNS = ("SCI_geometry", "SCI_human_use", "SCI_local", "SCI")
 
 
 def parse_objective_value(report: str) -> float | None:
@@ -49,6 +51,29 @@ def parse_objective_value(report: str) -> float | None:
                 return float(match.group(1))
     candidates = re.findall(r":\s*([0-9.+\-eE]+)", report)
     return float(candidates[-1]) if candidates else None
+
+
+def ensure_calibration_sci_columns(
+    grid_gdf,
+    *,
+    confirmed_mapping: dict,
+    global_params: dict,
+):
+    """Ensure SCI columns exist for adaptive-BLM calibration runs.
+
+    Real saved workspaces may predate the SCI_local refactor and only contain
+    the legacy ``SCI`` column. In that case, compute the paper-method SCI
+    fields from the current confirmed mapping and centralized method params.
+    """
+    if all(col in grid_gdf.columns for col in REQUIRED_SCI_COLUMNS):
+        return grid_gdf
+
+    params = resolve_method_params(global_params)
+    return calculate_dual_sci(
+        grid_gdf.copy(),
+        confirmed_mapping or {},
+        method_params=params,
+    )
 
 
 def build_queen_edges(grid_gdf) -> list[tuple[int, int]]:
@@ -286,6 +311,11 @@ def run_calibration_workflow(
     custom_matrix = state.get("custom_matrix") or DEFAULT_CONFLICT_MATRIX_10
     zone_targets = zone_targets or DEFAULT_ZONE_TARGETS
     blm_values = blm_values or DEFAULT_BLM_SWEEP
+    grid_gdf = ensure_calibration_sci_columns(
+        grid_gdf,
+        confirmed_mapping=confirmed_mapping,
+        global_params=global_params,
+    )
 
     output_dir = output_dir or os.path.join(
         os.path.dirname(pkl_path), f"BLM_Calibration_{datetime.now().strftime('%Y%m%d_%H%M')}"

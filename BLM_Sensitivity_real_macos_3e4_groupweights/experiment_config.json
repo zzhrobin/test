@@ -1,0 +1,97 @@
+{
+    "scenario_name": "BLM_Sensitivity_macOS_groupweights",
+    "base_blm": 0.0003,
+    "families": {
+        "theta_sensitivity": [
+            {
+                "label": "theta_0.2_1.0",
+                "theta_min": 0.2,
+                "theta_max": 1.0
+            },
+            {
+                "label": "theta_0.4_1.0",
+                "theta_min": 0.4,
+                "theta_max": 1.0
+            },
+            {
+                "label": "theta_0.1_1.0",
+                "theta_min": 0.1,
+                "theta_max": 1.0
+            },
+            {
+                "label": "theta_0.2_0.8",
+                "theta_min": 0.2,
+                "theta_max": 0.8
+            },
+            {
+                "label": "theta_0.3_0.9",
+                "theta_min": 0.3,
+                "theta_max": 0.9
+            }
+        ],
+        "alpha_beta_sensitivity": [
+            {
+                "label": "alpha_0.3_beta_0.7",
+                "sci_alpha": 0.3,
+                "sci_beta": 0.7
+            },
+            {
+                "label": "alpha_0.5_beta_0.5",
+                "sci_alpha": 0.5,
+                "sci_beta": 0.5
+            },
+            {
+                "label": "alpha_0.7_beta_0.3",
+                "sci_alpha": 0.7,
+                "sci_beta": 0.3
+            }
+        ],
+        "group_weight_sensitivity": [
+            {
+                "label": "baseline",
+                "sci_group_weights": {
+                    "fixed_barriers": 1.0,
+                    "linear_transit": 0.8,
+                    "soft_competition": 0.5
+                }
+            },
+            {
+                "label": "transit_heavier",
+                "sci_group_weights": {
+                    "fixed_barriers": 1.0,
+                    "linear_transit": 1.0,
+                    "soft_competition": 0.5
+                }
+            },
+            {
+                "label": "soft_heavier",
+                "sci_group_weights": {
+                    "fixed_barriers": 1.0,
+                    "linear_transit": 0.8,
+                    "soft_competition": 0.8
+                }
+            },
+            {
+                "label": "fixed_lighter",
+                "sci_group_weights": {
+                    "fixed_barriers": 0.8,
+                    "linear_transit": 0.8,
+                    "soft_competition": 0.5
+                }
+            },
+            {
+                "label": "compressed_weights",
+                "sci_group_weights": {
+                    "fixed_barriers": 1.0,
+                    "linear_transit": 0.9,
+                    "soft_competition": 0.7
+                }
+            }
+        ]
+    },
+    "fixed_blm_baseline_reuse": true,
+    "methods": [
+        "fixed_blm",
+        "sci_adaptive_blm"
+    ]
+}

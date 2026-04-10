@@ -1,0 +1,25 @@
+{
+    "scenario_name": "BLM_Calibration_macOS_sweep",
+    "zone_targets": {
+        "Z2_UIZ": 15,
+        "Z3_PSZ": 15,
+        "Z4_TZ": 15,
+        "Z6_FZT": 15
+    },
+    "blm_values": [
+        1e-06,
+        1e-05,
+        0.0001,
+        0.0003,
+        0.001
+    ],
+    "methods": [
+        "fixed_blm",
+        "sci_adaptive_blm"
+    ],
+    "zoned_blm_status": "planned_extension_not_implemented_in_this_step",
+    "adjacency_rules": {
+        "boundary_metrics": "shared-edge geometry; B_ij <= 0 excluded",
+        "patch_metrics": "8-neighbor connected components"
+    }
+}
